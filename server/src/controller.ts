@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { ChatService } from "./services/chat-service";
 
-export const messages = new Hono();
+export const messagesController = new Hono();
 
 const chatService = new ChatService();
 
-messages.post("/", async (c) => {
+messagesController.post("/", async (c) => {
   const body = await c.req.json();
   const userId = "some-user-id-from-auth-session"; // Replace with actual Auth ID
 
@@ -19,7 +19,7 @@ messages.post("/", async (c) => {
   return c.json(response);
 });
 
-messages.get("/:ticketId", async (c) => {
+messagesController.get("/:ticketId", async (c) => {
   const ticketId = c.req.param("ticketId");
   const history = await chatService.getHistory(ticketId);
   return c.json(history);

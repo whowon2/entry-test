@@ -9,6 +9,7 @@ import {
   serial,
 } from "drizzle-orm/mysql-core";
 import { user } from "./session";
+import { messages } from "./message";
 
 export const tickets = mysqlTable(
   "tickets",
