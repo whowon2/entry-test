@@ -5,6 +5,7 @@ import { logger } from "hono/logger";
 import { messagesController } from "./controller";
 import { socket } from "./socket";
 import { auth } from "./lib/auth";
+import { ticketsController } from "./tickets.controller";
 
 const app = new Hono();
 
@@ -20,6 +21,7 @@ app.use(
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 app.route("/api/messages", messagesController);
+app.route("/api/tickets", ticketsController);
 
 app.route("/api/ws", socket);
 

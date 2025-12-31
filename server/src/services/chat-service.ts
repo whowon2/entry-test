@@ -1,16 +1,14 @@
-import {
-  FunctionDeclarationsTool,
-  GoogleGenerativeAI,
-  SchemaType,
-} from "@google/generative-ai";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 import { tickets } from "../lib/db/schemas/ticket";
 import { db } from "../lib/db";
 import { messages } from "../lib/db/schemas/message";
 import { transferTool } from "../lib/transfer-tool";
 import { SYSTEM_INSTRUCTION } from "../lib/prompt";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const client = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
 export class ChatService {
   async sendMessage(userId: string, userContent: string, ticketId?: string) {
@@ -43,27 +41,34 @@ export class ChatService {
       limit: 15,
     });
 
+    console.log(userContent);
+
     // 4. Call Gemini
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: SYSTEM_INSTRUCTION,
-      tools: [transferTool],
+    const response = await client.models.generateContent({
+      model: "gemini-2.5-flash-lite",
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        tools: [{ functionDeclarations: [transferTool] }], // Note the nesting
+      },
+      contents: [
+        ...history.map((msg) => ({
+          role: msg.role === "user" ? "user" : "model",
+          parts: [{ text: msg.content }],
+        })),
+        { role: "user", parts: [{ text: userContent }] },
+      ],
     });
 
-    const chat = model.startChat({
-      history: history.map((msg) => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.content }],
-      })),
-    });
+    // 5. Parse Response (New SDK Structure)
+    // The new SDK often returns function calls in 'candidates[0].content.parts'
+    const candidate = response.candidates?.[0];
+    const functionCallPart = candidate?.content?.parts?.find(
+      (part) => part.functionCall,
+    );
 
-    const result = await chat.sendMessage(userContent);
-
-    const response = result.response;
-    const functionCall = response.functionCalls()?.[0];
-
-    if (functionCall) {
-      const { department, summary } = functionCall.args as any;
+    if (functionCallPart && functionCallPart.functionCall) {
+      // Extract arguments
+      const { department, summary } = functionCallPart.functionCall.args as any;
 
       // Update Ticket
       await db
@@ -75,8 +80,8 @@ export class ChatService {
         })
         .where(eq(tickets.id, currentTicketId));
 
-      // Save System Message
       const transferMsg = `Transferring to ${department}. Summary: ${summary}`;
+
       await db.insert(messages).values({
         ticketId: currentTicketId,
         role: "system",
@@ -92,7 +97,9 @@ export class ChatService {
       };
     } else {
       // Normal Text Response
-      const aiText = response.text();
+      const aiText =
+        candidate?.content?.parts?.[0]?.text ||
+        "I'm sorry, I couldn't generate a response.";
 
       await db.insert(messages).values({
         ticketId: currentTicketId,
@@ -108,11 +115,17 @@ export class ChatService {
       };
     }
   }
-
   async getHistory(ticketId: string) {
     return await db.query.messages.findMany({
       where: eq(messages.ticketId, ticketId),
       orderBy: [asc(messages.createdAt)],
+    });
+  }
+
+  async getTickets(userId: string) {
+    return await db.query.tickets.findMany({
+      where: eq(tickets.userId, userId),
+      orderBy: [desc(tickets.createdAt)],
     });
   }
 }

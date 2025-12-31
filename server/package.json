@@ -4,7 +4,7 @@
     "dev": "bun run --hot src/index.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^1.34.0",
     "better-auth": "^1.4.9",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.3",

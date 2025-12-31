@@ -1,15 +1,36 @@
 "use client";
 
-import { authClient } from "@/lib/auth-client";
-import Image from "next/image";
-import { redirect } from "next/navigation";
+import { ChatArea } from "@/components/chat";
+import { ChatSideBar } from "@/components/chat-side-bar";
+import { useState } from "react";
 
-export default function Home() {
-  const { data: session } = authClient.useSession();
+export default function Page() {
+  const [currentTicketId, setCurrentTicketId] = useState<string | null>(null);
 
-  if (!session) {
-    redirect("/auth/login");
-  }
+  // When a user selects a chat from the sidebar
+  const handleSelectTicket = (id: string | null) => {
+    setCurrentTicketId(id);
+  };
 
-  return <div className="flex p-8"></div>;
+  // When a new chat (null ID) gets its first real ID from the backend
+  const handleTicketCreated = (newId: string) => {
+    setCurrentTicketId(newId);
+    // You might want to trigger a refresh on the sidebar here to show the new item
+    // A simple way is to pass a "refreshTrigger" prop to Sidebar
+  };
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden font-sans text-gray-900">
+      <ChatSideBar
+        onSelectTicket={handleSelectTicket}
+        currentTicketId={currentTicketId}
+      />
+      <main className="flex-1 flex flex-col min-w-0 bg-white">
+        <ChatArea
+          ticketId={currentTicketId}
+          onTicketCreated={handleTicketCreated}
+        />
+      </main>
+    </div>
+  );
 }
