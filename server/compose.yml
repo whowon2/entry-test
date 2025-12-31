@@ -13,5 +13,11 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  api:
+    build:
+      context: .
+    ports:
+      - 3001:3001
+
 volumes:
   mysql_data:

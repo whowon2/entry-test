@@ -1,11 +1,12 @@
 import { Hono } from "hono";
-import { ChatService } from "./services/chat-service";
-import { auth } from "./lib/auth";
-import { eq } from "drizzle-orm";
+import { SendMessageUseCase } from "./send-message-use-case";
+import { auth } from "../lib/auth";
+import { TicketsRepository } from "./tickets.repository";
 
 export const ticketsController = new Hono();
 
-const chatService = new ChatService();
+const ticketsRepository = new TicketsRepository();
+const ticketsService = new SendMessageUseCase(ticketsRepository);
 
 ticketsController.get("/", async (c) => {
   const session = await auth.api.getSession({
@@ -18,7 +19,7 @@ ticketsController.get("/", async (c) => {
 
   const userId = session.user.id;
 
-  const userTickets = await chatService.getTickets(userId);
+  const userTickets = await ticketsRepository.findAll({ userId });
 
   return c.json(userTickets);
 });
