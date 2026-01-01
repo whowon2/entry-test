@@ -45,7 +45,7 @@ export class SendMessageUseCase {
     });
 
     const response = await client.models.generateContent({
-      model: "gemini-2.5-flash-lite",
+      model: "gemini-2.5-flash",
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         tools: [{ functionDeclarations: [transferTool] }], // Note the nesting
